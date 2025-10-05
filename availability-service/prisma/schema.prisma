@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SlotStatus {
+  OPEN
+  HELD
+  BOOKED
+}
+
+model Slot {
+  id        String     @id @default(uuid())
+  mentorId  String
+  start     DateTime
+  end       DateTime
+  status    SlotStatus @default(OPEN)
+  createdAt DateTime   @default(now())
+
+  @@index([mentorId, start])
+}
+

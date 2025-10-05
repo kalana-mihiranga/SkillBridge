@@ -1,6 +1,5 @@
-const USERS_API = import.meta.env.VITE_USERS_API;
+const USERS_API = import.meta.env.VITE_USERS_API || '/api/users';
 
-// generic helper (GET/POST/PATCH) that hits USERS_API by default
 export const http = {
   async get(url, params = {}, base = USERS_API) {
     const qs = new URLSearchParams(params).toString();

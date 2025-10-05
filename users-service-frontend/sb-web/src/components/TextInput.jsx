@@ -1,13 +1,14 @@
 export default function TextInput({ label, value, onChange, type = 'text', placeholder }) {
   return (
-    <label style={{ display: 'block', margin: '8px 0' }}>
-      <div style={{ fontSize: 13, opacity: 0.8 }}>{label}</div>
+    <label className="block">
+      {label && <div className="text-sm text-slate-600 mb-1">{label}</div>}
       <input
         type={type}
         value={value ?? ''}
         onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
-        style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 6 }}
+        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm
+                   focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white"
       />
     </label>
   );

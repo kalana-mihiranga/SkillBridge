@@ -15,17 +15,20 @@ function Multi({ label, options, value = [], onChange }) {
     onChange?.(Array.from(set));
   };
   return (
-    <div style={{ margin: '8px 0' }}>
-      <div style={{ fontSize: 13, opacity: 0.8 }}>{label}</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+    <div>
+      <div className="text-sm text-slate-600 mb-1">{label}</div>
+      <div className="flex flex-wrap gap-2">
         {options.map(o => (
-          <button key={o} type="button"
+          <button
+            type="button"
+            key={o}
             onClick={()=>toggle(o)}
-            style={{
-              padding: '6px 10px', borderRadius: 999,
-              border: '1px solid #ccc',
-              background: value.includes(o) ? '#eef' : '#fff'
-            }}>
+            className={`px-3 py-1.5 rounded-full border text-sm ${
+              value.includes(o)
+                ? 'bg-cyan-600 text-white border-cyan-600'
+                : 'bg-white text-slate-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
             {o}
           </button>
         ))}
@@ -65,31 +68,44 @@ export default function CreateProfile() {
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Create Profile</h2>
-      <form onSubmit={submit} style={{ maxWidth: 700 }}>
-        <TextInput label="Email" value={form.email} onChange={set('email')} />
-        <TextInput label="Full name" value={form.name} onChange={set('name')} />
-        <Select label="Role" value={form.role} onChange={set('role')} options={ROLES} />
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-slate-800">Create Profile</h2>
+
+      <form onSubmit={submit} className="bg-white border rounded-xl p-5 shadow-sm max-w-3xl space-y-4">
+        <div className="grid md:grid-cols-2 gap-4">
+          <TextInput label="Email" value={form.email} onChange={set('email')} />
+          <TextInput label="Full name" value={form.name} onChange={set('name')} />
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4">
+          <Select label="Role" value={form.role} onChange={set('role')} options={ROLES} />
+          <TextInput label="Timezone" value={form.timezone} onChange={set('timezone')} />
+          <TextInput label="Currency" value={form.currency} onChange={set('currency')} />
+        </div>
+
         {form.role === 'MENTOR' && (
-          <>
-            <Select label="Seniority" value={form.seniority} onChange={set('seniority')} options={SENIORITY} />
-            <TextInput label="Hourly rate (USD)" value={form.rate} onChange={set('rate')} />
-            <TextInput label="Currency" value={form.currency} onChange={set('currency')} />
+          <div className="space-y-4">
+            <div className="grid md:grid-cols-3 gap-4">
+              <Select label="Seniority" value={form.seniority} onChange={set('seniority')} options={SENIORITY} />
+              <TextInput label="Hourly rate" value={form.rate} onChange={set('rate')} />
+              <TextInput label="Bio" value={form.bio} onChange={set('bio')} />
+            </div>
             <Multi label="Domains" options={DOMAINS} value={form.domains} onChange={set('domains')} />
-            <Multi label="Badges" options={BADGES} value={form.badges} onChange={set('badges')} />
-          </>
+            <Multi label="Badges"  options={BADGES}  value={form.badges}  onChange={set('badges')} />
+          </div>
         )}
-        <TextInput label="Timezone" value={form.timezone} onChange={set('timezone')} />
-        <TextInput label="Bio" value={form.bio} onChange={set('bio')} />
-        <button type="submit" style={{ padding: '10px 14px', borderRadius: 6, marginTop: 8 }}>Create</button>
+
+        <button type="submit" className="bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700 transition">
+          Create
+        </button>
+
+        {error && <div className="text-red-600 text-sm">{error}</div>}
       </form>
 
-      {error && <div style={{ color: 'crimson', marginTop: 12 }}>{error}</div>}
       {result && (
-        <pre style={{ marginTop: 12, background: '#111', color: '#0f0', padding: 12, overflowX: 'auto' }}>
+        <div className="bg-slate-900 text-green-300 text-xs p-4 rounded max-w-3xl overflow-x-auto">
 {JSON.stringify(result, null, 2)}
-        </pre>
+        </div>
       )}
     </div>
   );
