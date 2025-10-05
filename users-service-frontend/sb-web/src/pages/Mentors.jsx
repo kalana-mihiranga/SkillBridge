@@ -13,6 +13,7 @@ export default function Mentors() {
   const [filters, setFilters] = useState({
     domain: '', seniority: '', badge: '', minRate: '', maxRate: '', q: '', date: ''
   });
+  const [menteeId, setMenteeId] = useState('');
   const [loading, setLoading] = useState(false);
   const [list, setList] = useState([]);
   const [error, setError] = useState('');
@@ -51,6 +52,22 @@ const in60  = new Date(Date.now() + 60*24*3600*1000).toISOString().slice(0,10);
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold text-slate-800">Browse Mentors</h2>
+      <div className="bg-white border rounded-xl p-4 shadow-sm">
+  <div className="grid md:grid-cols-3 gap-3">
+    <div>
+      <div className="text-sm text-slate-600 mb-1">Your Mentee ID</div>
+      <input
+        value={menteeId}
+        onChange={(e)=>setMenteeId(e.target.value)}
+        placeholder="paste a mentee id"
+        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm
+                   focus:outline-none focus:ring-2 focus:ring-cyan-500"
+      />
+      <p className="text-xs text-slate-500 mt-1">Used when booking a slot (no auth yet).</p>
+    </div>
+  </div>
+</div>
+
 
       <div className="bg-white border rounded-xl p-4 shadow-sm">
         <div className="grid md:grid-cols-7 gap-3">
@@ -78,7 +95,11 @@ const in60  = new Date(Date.now() + 60*24*3600*1000).toISOString().slice(0,10);
 
       <div className="grid md:grid-cols-2 gap-4">
         {list.length === 0 && !loading && <div className="text-slate-600">No mentors found.</div>}
-        {list.map((m) => <MentorCard key={m.id} m={m} />)}
+
+{list.map((m) => (
+  <MentorCard key={m.id} m={m} date={filters.date} menteeId={menteeId} />
+))}
+
       </div>
     </div>
   );

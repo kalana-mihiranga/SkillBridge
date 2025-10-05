@@ -2,6 +2,7 @@ import { http } from './client';
 const AVAIL_API = import.meta.env.VITE_AVAIL_API || '/api/availability';
 
 export function publishSlots(body) {
+  // body: { mentorId, slots: [{start, end}, ...] }
   return http.post('/availability/slots', body, AVAIL_API);
 }
 

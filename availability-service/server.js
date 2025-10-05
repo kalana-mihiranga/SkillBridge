@@ -72,6 +72,20 @@ app.patch('/availability/slots/:id/status', async (req, res) => {
     res.status(404).json({ error: 'slot not found' });
   }
 });
+/**
+ * GET /availability/slots/:id
+ * Return single slot by id
+ */
+app.get('/availability/slots/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const slot = await prisma.slot.findUnique({ where: { id } });
+    if (!slot) return res.status(404).json({ error: 'not found' });
+    res.json(slot);
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
 
 const port = process.env.PORT || 4102;
 app.listen(port, () => console.log(`availability service on :${port}`));

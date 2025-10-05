@@ -2,17 +2,22 @@ import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import Home from './pages/Home';
 import Mentors from './pages/Mentors';
 import CreateProfile from './pages/CreateProfile';
+import PublishAvailability from './pages/PublishAvailability';
+import Bookings from './pages/Bookings';
 
 export default function App() {
   return (
     <BrowserRouter>
-      <header className="bg-slate-800 text-white px-6 py-3 shadow">
+       <header className="fixed inset-x-0 top-0 z-50 bg-slate-800 text-white px-6 h-14 shadow">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <h1 className="text-lg font-bold tracking-wide">SkillBridge</h1>
           <nav className="space-x-6 text-sm">
             <NavLink to="/" className="hover:text-cyan-300">Home</NavLink>
             <NavLink to="/mentors" className="hover:text-cyan-300">Mentors</NavLink>
-            <NavLink to="/create-profile" className="hover:text-cyan-300">Create</NavLink>
+           
+<NavLink to="/create-profile" className="hover:text-cyan-300">Create</NavLink>
+ <NavLink to="/publish-availability" className="hover:text-cyan-300">Availability</NavLink>
+ <NavLink to="/bookings" className="hover:text-cyan-300">Bookings</NavLink>
           </nav>
         </div>
       </header>
@@ -23,6 +28,8 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/mentors" element={<Mentors />} />
             <Route path="/create-profile" element={<CreateProfile />} />
+            <Route path="/publish-availability" element={<PublishAvailability />} />
+            <Route path="/bookings" element={<Bookings />} />
           </Routes>
         </div>
       </main>
