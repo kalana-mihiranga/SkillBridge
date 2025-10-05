@@ -5,6 +5,8 @@ import CreateProfile from './pages/CreateProfile';
 
 export default function App() {
   return (
+
+    
     <BrowserRouter>
       <div style={{ padding: 12, borderBottom: '1px solid #eee', marginBottom: 12 }}>
         <Link to="/" style={{ marginRight: 12 }}>Home</Link>
