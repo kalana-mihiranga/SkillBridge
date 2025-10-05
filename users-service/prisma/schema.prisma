@@ -1,0 +1,42 @@
+// users-service/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// App enums
+enum Role {
+  MENTEE
+  MENTOR
+}
+
+enum Seniority {
+  SENIOR
+  STAFF
+  PRINCIPAL
+}
+
+// We’ll validate domains/badges in the API layer
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  name      String
+  role      Role
+  seniority Seniority?
+  rate      Int?      // hourly USD (or your currency), optional
+  currency  String?   // e.g., "USD", optional
+  timezone  String?   // e.g., "Asia/Colombo"
+  bio       String?
+  // Lists stored as Postgres string arrays via Prisma scalar lists
+  domains   String[]
+  badges    String[]
+  // Optional service packages mentors can offer (JSON)
+  packages  Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
