@@ -24,9 +24,7 @@ function Multi({ label, options, value = [], onChange }) {
             key={o}
             onClick={()=>toggle(o)}
             className={`px-3 py-1.5 rounded-full border text-sm ${
-              value.includes(o)
-                ? 'bg-cyan-600 text-white border-cyan-600'
-                : 'bg-white text-slate-700 border-gray-300 hover:bg-gray-50'
+              value.includes(o) ? 'bg-cyan-600 text-white border-cyan-600' : 'bg-white text-slate-700 border-gray-300 hover:bg-gray-50'
             }`}
           >
             {o}
@@ -46,12 +44,10 @@ export default function CreateProfile() {
   });
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
-
   const set = (k) => (v) => setForm(f => ({ ...f, [k]: v }));
 
   const submit = async (e) => {
-    e.preventDefault();
-    setError(''); setResult(null);
+    e.preventDefault(); setError(''); setResult(null);
     try {
       const payload = {
         ...form,
@@ -62,9 +58,7 @@ export default function CreateProfile() {
       };
       const data = await createUserProfile(payload);
       setResult(data);
-    } catch (e) {
-      setError(String(e));
-    }
+    } catch (e) { setError(String(e)); }
   };
 
   return (

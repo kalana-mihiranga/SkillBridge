@@ -1,43 +1,102 @@
 import { useState } from 'react';
+import { pingUsers } from '../api/users';
+import { http } from '../api/client';
 
-const USERS_API = import.meta.env.VITE_USERS_API || '/api/users';
+// Define base URLs from environment variables
+const USERS_API = import.meta.env.VITE_USERS_API || 'http://localhost:4101';
+const AVAIL_API = import.meta.env.VITE_AVAIL_API || 'http://localhost:4102';
+const BOOK_API  = import.meta.env.VITE_BOOKING_API || 'http://localhost:4103';
+const MSG_API   = import.meta.env.VITE_MSG_API || 'http://localhost:4104';
 
 export default function Home() {
-  const [resp, setResp] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
 
-  const ping = async () => {
-    setErr(''); setResp('');
+  async function pingAll() {
+    setLoading(true);
+    setErr('');
+    setResults([]);
+
+    const services = [
+      { name: 'Users Service', url: `${USERS_API}/health` },
+      { name: 'Availability Service', url: `${AVAIL_API}/health` },
+      { name: 'Booking Service', url: `${BOOK_API}/health` },
+      { name: 'Messaging Service', url: `${MSG_API}/health` }
+    ];
+
     try {
-      const r = await fetch(`${USERS_API}/health`);
-      const t = await r.text();
-      setResp(t);
+      const responses = await Promise.allSettled(
+        services.map(async s => {
+          const r = await fetch(s.url);
+          const text = await r.text();
+          return { ...s, ok: r.ok, body: text };
+        })
+      );
+
+      setResults(
+        responses.map((res, i) => {
+          if (res.status === 'fulfilled') return res.value;
+          return { ...services[i], ok: false, body: String(res.reason) };
+        })
+      );
     } catch (e) {
       setErr(String(e));
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-semibold text-slate-800">Welcome to SkillBridge (Local)</h2>
-      <p className="text-slate-600">Use the navbar to browse mentors or create a profile.</p>
+    <div className="space-y-6">
+      <h2 className="text-2xl font-semibold text-slate-800">SkillBridge Platform (Local Dev)</h2>
+      <p className="text-slate-600">
+        This dashboard lets you verify all backend microservices are running correctly.
+      </p>
 
-      <div className="bg-white border rounded-xl p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm text-slate-600">Users API base</div>
-            <div className="font-mono text-xs">{USERS_API}</div>
-          </div>
-          <button
-            onClick={ping}
-            className="bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700 transition text-sm"
-          >
-            Ping API
-          </button>
+      <div className="bg-white border rounded-xl p-4 shadow-sm flex items-center justify-between">
+        <div>
+          <div className="text-sm text-slate-600">Check health of all services</div>
         </div>
-        {resp && <pre className="mt-3 bg-slate-900 text-green-300 text-xs p-3 rounded">{resp}</pre>}
-        {err && <div className="mt-3 text-red-600 text-sm">{err}</div>}
+        <button
+          onClick={pingAll}
+          disabled={loading}
+          className="bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700 transition text-sm disabled:opacity-50"
+        >
+          {loading ? 'Checking…' : 'Ping All'}
+        </button>
       </div>
+
+      {err && <div className="text-red-600 text-sm">{err}</div>}
+
+      {results.length > 0 && (
+        <div className="grid md:grid-cols-2 gap-4">
+          {results.map((r) => (
+            <div
+              key={r.name}
+              className={`border rounded-xl p-4 shadow-sm ${
+                r.ok ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-slate-800">{r.name}</h3>
+                <span
+                  className={`px-2 py-0.5 text-xs rounded-full font-semibold ${
+                    r.ok
+                      ? 'bg-green-500 text-white'
+                      : 'bg-red-500 text-white'
+                  }`}
+                >
+                  {r.ok ? 'Healthy' : 'Down'}
+                </span>
+              </div>
+              <pre className="mt-3 bg-slate-900 text-green-300 text-xs p-3 rounded overflow-x-auto max-h-40">
+                {r.body}
+              </pre>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

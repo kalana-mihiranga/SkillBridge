@@ -1,0 +1,40 @@
+// code-review-service/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Artifact {
+  id         String    @id @default(uuid())
+  bookingId  String
+  type       String    // "REPO" | "DIFF" | "FILE"
+  repoUrl    String?   // if type=REPO
+  title      String
+  content    String?   // if type=DIFF or FILE (text)
+  createdAt  DateTime  @default(now())
+  createdBy  String    // user id (mentor/mentee)
+
+  comments   Comment[]
+  @@index([bookingId, createdAt])
+}
+
+model Comment {
+  id         String    @id @default(uuid())
+  artifactId String
+  authorId   String
+  authorRole String    // 'MENTEE' | 'MENTOR'
+  filePath   String?
+  lineStart  Int?
+  lineEnd    Int?
+  body       String
+  createdAt  DateTime  @default(now())
+
+  artifact   Artifact  @relation(fields: [artifactId], references: [id])
+  @@index([artifactId, createdAt])
+}
+

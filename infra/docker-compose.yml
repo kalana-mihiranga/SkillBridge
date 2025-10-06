@@ -1,0 +1,111 @@
+services:
+  # --- USERS SERVICE DB ---
+  users-db:
+    image: postgres:16-alpine
+    container_name: sb-users-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: users_db
+    ports:
+      - "5436:5432"     # changed from 5432 to avoid conflicts
+    volumes:
+      - users_data:/var/lib/postgresql/data
+    networks:
+      - sb-net
+
+  # --- AVAILABILITY SERVICE DB ---
+  availability-db:
+    image: postgres:16-alpine
+    container_name: sb-availability-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: availability_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - availability_data:/var/lib/postgresql/data
+    networks:
+      - sb-net
+
+  # --- BOOKING SERVICE DB ---
+  booking-db:
+    image: postgres:16-alpine
+    container_name: sb-booking-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: booking_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - booking_data:/var/lib/postgresql/data
+    networks:
+      - sb-net
+
+  # --- MESSAGING SERVICE DB ---
+  messaging-db:
+    image: postgres:16-alpine
+    container_name: sb-messaging-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: messaging_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - messaging_data:/var/lib/postgresql/data
+    networks:
+      - sb-net
+
+  # --- CODE REVIEW SERVICE DB ---
+  code-review-db:
+    image: postgres:16-alpine
+    container_name: sb-code-review-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: code_review_db
+    ports:
+      - "5437:5432"
+    volumes:
+      - code_review_data:/var/lib/postgresql/data
+    networks:
+      - sb-net
+
+  # --- PGADMIN (optional GUI) ---
+  pgadmin:
+    image: dpage/pgadmin4:8.12
+    container_name: sb-pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@skillbridge.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - users-db
+      - availability-db
+      - booking-db
+      - messaging-db
+      - code-review-db
+    networks:
+      - sb-net
+
+volumes:
+  users_data:
+  availability_data:
+  booking_data:
+  messaging_data:
+  code_review_data:
+
+networks:
+  sb-net:
+    driver: bridge
+

@@ -1,28 +1,31 @@
-const USERS_API = import.meta.env.VITE_USERS_API || '/api/users';
+const defaultHeaders = { 'Content-Type': 'application/json' };
 
 export const http = {
-  async get(url, params = {}, base = USERS_API) {
+  async get(path, params = {}, base) {
     const qs = new URLSearchParams(params).toString();
-    const resp = await fetch(`${base}${url}${qs ? `?${qs}` : ''}`);
-    if (!resp.ok) throw new Error(await resp.text());
-    return resp.json();
+    const url = `${base}${path}${qs ? `?${qs}` : ''}`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(await r.text());
+    // some endpoints return plain text (health), handle that
+    const ct = r.headers.get('content-type') || '';
+    return ct.includes('application/json') ? r.json() : r.text();
   },
-  async post(url, body, base = USERS_API) {
-    const resp = await fetch(`${base}${url}`, {
+  async post(path, body, base) {
+    const r = await fetch(`${base}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: defaultHeaders,
       body: JSON.stringify(body || {})
     });
-    if (!resp.ok) throw new Error(await resp.text());
-    return resp.json();
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
   },
-  async patch(url, body, base = USERS_API) {
-    const resp = await fetch(`${base}${url}`, {
+  async patch(path, body, base) {
+    const r = await fetch(`${base}${path}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: defaultHeaders,
       body: JSON.stringify(body || {})
     });
-    if (!resp.ok) throw new Error(await resp.text());
-    return resp.json();
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
   }
 };
