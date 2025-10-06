@@ -30,18 +30,3 @@ model Message {
 }
 
 
-model RepoFile {
-  id         String   @id @default(uuid())
-  artifactId String
-  path       String   // "src/index.ts"
-  isDir      Boolean  @default(false)
-  size       Int      @default(0)
-  sha        String?  // Git blob/tree sha if available
-  // store small text files (<= 200KB) for quick viewing; binaries not stored
-  content    String? 
-
-  artifact   Artifact @relation(fields: [artifactId], references: [id])
-
-  @@unique([artifactId, path])
-  @@index([artifactId, path])
-}

@@ -4,7 +4,7 @@ import Mentors from './pages/Mentors';
 import CreateProfile from './pages/CreateProfile';
 import PublishAvailability from './pages/PublishAvailability';
 import Bookings from './pages/Bookings';
-import NotifBell from './components/NotifBell';
+import NotifBell from './components/NotifBell';import PairSession from './pages/PairSession';
 export default function App() {
   return (
     <BrowserRouter>
@@ -30,7 +30,7 @@ export default function App() {
             <Route path="/mentors" element={<Mentors />} />
             <Route path="/create-profile" element={<CreateProfile />} />
             <Route path="/publish-availability" element={<PublishAvailability />} />
-            <Route path="/bookings" element={<Bookings />} />
+            <Route path="/bookings" element={<Bookings />} /><Route path="/pair" element={<PairSession />} />
           </Routes>
         </div>
       </main>

@@ -1,6 +1,6 @@
 // src/pages/Bookings.jsx
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { listBookingsDetailed, deleteBooking } from '../api/booking';
 import { ensureThread, getThreadByBooking, listMessages } from '../api/messaging';
 import ChatPanel from '../components/ChatPanel';
@@ -16,7 +16,7 @@ function setSeenNow(whoId, bookingId) {
 }
 
 // ---- Card for a single booking ----
-function BookingCard({ b, onCancel, onChat, onReview, unread = 0 }) {
+function BookingCard({ b, onCancel, onChat, onReview, onPair, unread = 0 }) {
   const start = new Date(b.start);
   const end = new Date(b.end);
   const dateStr = start.toISOString().slice(0, 10);
@@ -58,6 +58,13 @@ function BookingCard({ b, onCancel, onChat, onReview, unread = 0 }) {
             Code Review
           </button>
           <button
+            onClick={() => onPair?.(b)}
+            className="text-sm bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-1.5 rounded-md"
+            title="Join pair-programming session (WebRTC)"
+          >
+            Join Session
+          </button>
+          <button
             onClick={() => onChat?.(b)}
             className="relative text-sm bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-md"
             title="Open chat"
@@ -86,6 +93,7 @@ function BookingCard({ b, onCancel, onChat, onReview, unread = 0 }) {
 // ---- Page ----
 export default function Bookings() {
   const location = useLocation();
+  const navigate = useNavigate();
   const openFromBell = location?.state?.openBookingId || null;
 
   const [role, setRole] = useState('mentee'); // 'mentee' | 'mentor'
@@ -146,7 +154,7 @@ export default function Bookings() {
   useEffect(() => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
     setUnreadMap({});
-    if (!whoId) return;
+    if (!whoId || items.length === 0) return;
 
     const poll = async () => {
       try {
@@ -192,6 +200,20 @@ export default function Bookings() {
       setSeenNow(whoId, b.id);
       setUnreadMap(prev => ({ ...prev, [b.id]: 0 }));
     }
+  }
+
+  // open code review panel
+  function openReview(b) {
+    setReviewFor(b);
+  }
+
+  // open WebRTC pair page
+  function openPair(b) {
+    if (!whoId) {
+      alert('Please enter your ID first.');
+      return;
+    }
+    navigate(`/pair?bookingId=${encodeURIComponent(b.id)}&userId=${encodeURIComponent(whoId)}&role=${encodeURIComponent(meRole)}`);
   }
 
   // notifications strip: bookings with unread > 0
@@ -254,8 +276,8 @@ export default function Bookings() {
           </div>
         </div>
 
-        {err && <div className="text-red-600 text-sm mt-2">{err}</div>}
-        {msg && <div className="text-emerald-700 text-sm mt-2">{msg}</div>}
+        {err && <div className="mt-2 text-red-600 text-sm">{err}</div>}
+        {msg && <div className="mt-2 text-emerald-700 text-sm">{msg}</div>}
       </div>
 
       {/* Notifications strip */}
@@ -288,7 +310,8 @@ export default function Bookings() {
                 b={b}
                 onCancel={cancelOne}
                 onChat={openChat}
-                onReview={setReviewFor}
+                onReview={openReview}
+                onPair={openPair}
                 unread={unreadMap[b.id] || 0}
               />
             ))}
@@ -309,7 +332,8 @@ export default function Bookings() {
                 b={b}
                 onCancel={cancelOne}
                 onChat={openChat}
-                onReview={setReviewFor}
+                onReview={openReview}
+                onPair={openPair}
                 unread={unreadMap[b.id] || 0}
               />
             ))}
