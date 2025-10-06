@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { listArtifacts, createArtifact, listComments, addComment, getRepoTree, getRepoRaw } from '../api/codeReview';
+import {
+  listArtifacts,
+  createArtifact,
+  listComments,
+  addComment,
+  getRepoTree,
+  getRepoRaw,
+} from '../api/codeReview';
 import CodeViewer from './CodeViewer';
 
-export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClose }) {
+export default function CodeReviewPanel({ booking, meId, meRole = 'MENTEE', onClose }) {
   const [items, setItems] = useState([]);
   const [tab, setTab] = useState('viewer');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const [dark, setDark] = useState(true);
+  const [wide, setWide] = useState(false); // code area wide vs centered
 
   // New artifact
   const [type, setType] = useState('REPO');
@@ -32,29 +40,36 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
   const [cStart, setCStart] = useState('');
   const [cEnd, setCEnd] = useState('');
 
-  // Resizable sidebar (left) width in %
-  const [leftPct, setLeftPct] = useState(32); // start slightly wider
+  // Resizable left sidebar width (%)
+  const [leftPct, setLeftPct] = useState(28);
   const draggingRef = useRef(false);
   const startXRef = useRef(0);
   const startPctRef = useRef(leftPct);
+
+  // Ref to CodeViewer for imperative scroll
+  const viewerRef = useRef(null);
 
   const chrome = dark
     ? { bg: 'bg-slate-900', panel: 'bg-slate-800', text: 'text-slate-200', muted: 'text-slate-400', border: 'border-slate-700' }
     : { bg: 'bg-white', panel: 'bg-white', text: 'text-slate-800', muted: 'text-slate-600', border: 'border-slate-300' };
 
-  async function reload() {
-    setLoading(true); setErr('');
-    try {
-      const r = await listArtifacts(booking.id);
-      setItems(r.items || []);
-      if (!sel && r.items?.length) {
-        setSel(r.items[0]);
-        await openArtifact(r.items[0], { keepTab: true });
-      }
-    } catch (e) { setErr(String(e)); }
-    finally { setLoading(false); }
-  }
-  useEffect(() => { if (booking?.id) reload(); /* eslint-disable react-hooks/exhaustive-deps */ }, [booking?.id]);
+  // Load artifacts
+  useEffect(() => {
+    if (!booking?.id) return;
+    (async () => {
+      setLoading(true); setErr('');
+      try {
+        const r = await listArtifacts(booking.id);
+        setItems(r.items || []);
+        if (!sel && r.items?.length) {
+          setSel(r.items[0]);
+          await openArtifact(r.items[0], { keepTab: true });
+        }
+      } catch (e) { setErr(String(e)); }
+      finally { setLoading(false); }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booking?.id]);
 
   async function createOne(e) {
     e?.preventDefault();
@@ -77,12 +92,13 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
     await loadComments(a.id);
     if (a.type === 'REPO' && a.repoUrl) {
       await openDir(a, '');
-    } else if (a.type === 'DIFF' || a.type === 'FILE') {
+    } else {
       setFilePath(a.title);
       setFileText(a.content || '');
     }
     if (!opts.keepTab) setTab('viewer');
   }
+
   async function loadComments(artifactId) {
     try {
       const r = await listComments(artifactId);
@@ -94,12 +110,10 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
     const parts = (path || '').split('/').filter(Boolean);
     const acc = [];
     const list = [{ name: repoInfo.repo || '/', path: '' }];
-    parts.forEach((p) => {
-      acc.push(p);
-      list.push({ name: p, path: acc.join('/') });
-    });
+    parts.forEach(p => { acc.push(p); list.push({ name: p, path: acc.join('/') }); });
     return list;
   }
+
   async function openDir(a, path) {
     setErr('');
     try {
@@ -107,16 +121,15 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
       setTree(r.items || []);
       setRepoInfo({ repo: r.repo, branch: r.branch });
       setCwd(path || '');
-      setFilePath('');
-      setFileText('');
+      setFilePath(''); setFileText('');
     } catch (e) { setErr(String(e)); }
   }
+
   async function openFile(a, path) {
     setErr('');
     try {
       const text = await getRepoRaw(a.id, path);
-      setFilePath(path);
-      setFileText(text);
+      setFilePath(path); setFileText(text);
     } catch (e) { setErr(String(e)); }
   }
 
@@ -125,23 +138,23 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
     setCStart(String(from));
     setCEnd(String(to));
   }
+
   async function addOneComment(e) {
     e?.preventDefault();
     if (!sel || !cBody.trim()) return;
     try {
       const payload = {
-        authorId: meId,
-        authorRole: meRole,
-        body: cBody,
+        authorId: meId, authorRole: meRole, body: cBody,
         filePath: cFile || undefined,
         lineStart: cStart ? Number(cStart) : undefined,
-        lineEnd: cEnd ? Number(cEnd) : undefined
+        lineEnd: cEnd ? Number(cEnd) : undefined,
       };
       const c = await addComment(sel.id, payload);
       setComments(prev => [...prev, c]);
       setCBody('');
     } catch (e) { setErr(String(e)); }
   }
+
   const visibleComments = useMemo(() => {
     if (!sel) return [];
     if (sel.type === 'REPO') {
@@ -151,14 +164,14 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
     return comments;
   }, [comments, sel, filePath]);
 
-  // Sidebar resize handlers
+  // Resize left sidebar (desktop only)
   useEffect(() => {
     function onMove(e) {
       if (!draggingRef.current) return;
-      const rect = document.getElementById('sb-codepanel')?.getBoundingClientRect();
-      if (!rect) return;
+      const panel = document.getElementById('sb-codepanel');
+      if (!panel) return;
       const dx = e.clientX - startXRef.current;
-      const pct = Math.max(20, Math.min(50, startPctRef.current + (dx / rect.width) * 100));
+      const pct = Math.max(20, Math.min(45, startPctRef.current + (dx / panel.clientWidth) * 100));
       setLeftPct(pct);
     }
     function onUp() { draggingRef.current = false; }
@@ -170,14 +183,26 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
     };
   }, []);
 
+  // comment -> scroll to code
+  function jumpTo(c) {
+    if (sel?.type === 'REPO' && c.filePath && c.filePath !== filePath) {
+      openFile(sel, c.filePath).then(() => {
+        setTimeout(() => viewerRef.current?.scrollToRange(c.lineStart, c.lineEnd), 60);
+      });
+    } else {
+      viewerRef.current?.scrollToRange(c.lineStart, c.lineEnd);
+    }
+    setTab('viewer');
+  }
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60">
-      {/* Outer panel grows: 95vw x 90vh */}
+      {/* Outer */}
       <div
         id="sb-codepanel"
         className={`w-[95vw] h-[90vh] rounded-2xl overflow-hidden shadow-2xl ${chrome.bg} ${chrome.text} border ${chrome.border} flex flex-col`}
       >
-        {/* Header (sticky) */}
+        {/* Header */}
         <div className={`flex-shrink-0 px-4 py-3 border-b ${chrome.border} flex items-center justify-between`}>
           <div className="flex items-center gap-3">
             <button
@@ -194,7 +219,13 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={()=>setDark(d=>!d)}
+              onClick={() => setWide(w => !w)}
+              className={`text-xs px-3 py-1.5 rounded-md border ${chrome.border} hover:bg-slate-50/5`}
+            >
+              {wide ? 'Centered' : 'Wide'}
+            </button>
+            <button
+              onClick={() => setDark(d => !d)}
               className={`text-xs px-3 py-1.5 rounded-md border ${chrome.border} ${dark ? 'bg-slate-800' : 'bg-white'} hover:bg-slate-50/5`}
             >
               {dark ? 'Dark' : 'Light'}
@@ -202,38 +233,61 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
           </div>
         </div>
 
-        {/* Tabs (sticky) */}
+        {/* Tabs */}
         <div className={`flex-shrink-0 px-4 pt-3 border-b ${chrome.border} flex gap-2`}>
-          <button onClick={()=>setTab('viewer')} className={`px-3 py-1.5 rounded-md text-sm border ${tab==='viewer'?'bg-emerald-600 text-white border-emerald-600':'hover:bg-slate-50/5 ' + chrome.border}`}>Viewer</button>
-          <button onClick={()=>setTab('list')}   className={`px-3 py-1.5 rounded-md text-sm border ${tab==='list'  ?'bg-emerald-600 text-white border-emerald-600':'hover:bg-slate-50/5 ' + chrome.border}`}>Artifacts</button>
-          <button onClick={()=>setTab('new')}    className={`px-3 py-1.5 rounded-md text-sm border ${tab==='new'   ?'bg-emerald-600 text-white border-emerald-600':'hover:bg-slate-50/5 ' + chrome.border}`}>New Artifact</button>
-          {err && <div className="ml-auto text-sm text-red-400">{String(err)}</div>}
+          <button
+            onClick={() => setTab('viewer')}
+            className={`px-3 py-1.5 rounded-md text-sm border ${
+              tab === 'viewer' ? 'bg-emerald-600 text-white border-emerald-600' : 'hover:bg-slate-50/5 ' + chrome.border
+            }`}
+          >
+            Viewer
+          </button>
+          <button
+            onClick={() => setTab('list')}
+            className={`px-3 py-1.5 rounded-md text-sm border ${
+              tab === 'list' ? 'bg-emerald-600 text-white border-emerald-600' : 'hover:bg-slate-50/5 ' + chrome.border
+            }`}
+          >
+            Artifacts
+          </button>
+          <button
+            onClick={() => setTab('new')}
+            className={`px-3 py-1.5 rounded-md text-sm border ${
+              tab === 'new' ? 'bg-emerald-600 text-white border-emerald-600' : 'hover:bg-slate-50/5 ' + chrome.border
+            }`}
+          >
+            New Artifact
+          </button>
+          {err && <div className="ml-auto text-sm text-red-400 truncate">{String(err)}</div>}
         </div>
 
-        {/* Content scroller fills remaining height */}
+        {/* Content */}
         <div className="flex-1 overflow-auto p-4">
           {/* Viewer */}
           {tab === 'viewer' && sel && (
-            <div className="grid grid-cols-12 gap-0 rounded-xl overflow-hidden border border-transparent sm:border-transparent md:border-transparent">
-              {/* Sidebar */}
+            <div className="grid grid-cols-12 gap-3">
+              {/* Left: repo/artifact sidebar (resizable on md+) */}
               <aside
-                className={`col-span-12 md:col-span-5 lg:col-span-4 xl:col-span-3 2xl:col-span-3`}
-                style={{ width: `clamp(240px, ${leftPct}%, 720px)` }}
+                className="col-span-12 md:col-span-4 lg:col-span-3"
+                style={window.innerWidth >= 768 ? { width: `clamp(220px, ${leftPct}%, 560px)` } : undefined}
               >
-                <div className={`h-full rounded-l-xl border ${chrome.border} ${chrome.panel} overflow-hidden flex flex-col`}>
+                <div className={`h-full rounded-xl border ${chrome.border} ${chrome.panel} overflow-hidden flex flex-col`}>
                   <div className="px-3 py-2 border-b sticky top-0 z-10 bg-inherit">
                     {sel.type === 'REPO' ? (
                       <>
                         <div className={`text-xs ${chrome.muted} uppercase mb-1`}>Repository</div>
                         <div className="text-sm">
-                          <div className="truncate font-medium">{repoInfo.repo} <span className={`${chrome.muted} text-xs`}>@ {repoInfo.branch}</span></div>
+                          <div className="truncate font-medium">
+                            {repoInfo.repo} <span className={`${chrome.muted} text-xs`}>@ {repoInfo.branch}</span>
+                          </div>
                           <nav className="mt-1 text-xs flex flex-wrap gap-x-1 gap-y-1">
                             {crumbs(cwd).map((c, i) => (
                               <span key={c.path} className="flex items-center">
                                 {i !== 0 && <span className={`${chrome.muted} mx-1`}>/</span>}
                                 <button
                                   type="button"
-                                  onClick={()=>openDir(sel, c.path)}
+                                  onClick={() => openDir(sel, c.path)}
                                   className="hover:underline"
                                   title={c.path || '/'}
                                 >
@@ -258,7 +312,7 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
                         {cwd && (
                           <button
                             className={`mb-2 text-xs px-2 py-1 rounded-md border ${chrome.border} hover:bg-slate-50/5`}
-                            onClick={()=>openDir(sel, cwd.split('/').slice(0, -1).join('/'))}
+                            onClick={() => openDir(sel, cwd.split('/').slice(0, -1).join('/'))}
                           >
                             ← Parent
                           </button>
@@ -271,11 +325,13 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
                               <li key={it.path} className="flex items-center justify-between">
                                 <button
                                   className="text-left flex-1 hover:underline"
-                                  onClick={() => it.type === 'dir' ? openDir(sel, it.path) : openFile(sel, it.path)}
+                                  onClick={() => (it.type === 'dir' ? openDir(sel, it.path) : openFile(sel, it.path))}
                                 >
                                   {it.type === 'dir' ? '📁' : '📄'} {it.name}
                                 </button>
-                                {it.type === 'file' && <span className={`text-[10px] ${chrome.muted} ml-2`}>{it.size ?? ''}</span>}
+                                {it.type === 'file' && (
+                                  <span className={`text-[10px] ${chrome.muted} ml-2`}>{it.size ?? ''}</span>
+                                )}
                               </li>
                             ))}
                           </ul>
@@ -288,52 +344,110 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
                 </div>
               </aside>
 
-              {/* Drag handle between sidebar and code */}
-              <div
-                className={`hidden md:block w-2 cursor-col-resize ${dark ? 'bg-slate-800' : 'bg-slate-200'}`}
-                onMouseDown={(e) => {
-                  draggingRef.current = true;
-                  startXRef.current = e.clientX;
-                  startPctRef.current = leftPct;
-                }}
-                title="Drag to resize"
-              />
-
-              {/* Code + comments */}
-              <section className="col-span-12 md:col-span-7 lg:col-span-8 xl:col-span-9 2xl:col-span-9 pl-0 md:pl-3">
-                <CodeViewer
-                  text={sel.type === 'REPO' ? fileText : (sel.content || '')}
-                  filePath={sel.type === 'REPO' ? filePath : sel.title}
-                  comments={visibleComments}
-                  onSelectRange={handleSelectRange}
-                  dark={dark}
-                />
-
-                <div className={`mt-3 rounded-xl border ${chrome.border} ${chrome.panel} p-3 space-y-2`}>
-                  <div className="text-sm font-semibold">Add comment</div>
-                  <div className="grid md:grid-cols-4 gap-2 items-end">
-                    <label className="block">
-                      <div className={`text-xs ${chrome.muted} mb-1`}>File</div>
-                      <input value={cFile} onChange={e=>setCFile(e.target.value)} className={`w-full rounded px-2 py-1.5 text-sm border ${chrome.border} ${chrome.bg}`} placeholder="path/in/repo" />
-                    </label>
-                    <label className="block">
-                      <div className={`text-xs ${chrome.muted} mb-1`}>Start</div>
-                      <input value={cStart} onChange={e=>setCStart(e.target.value)} className={`w-full rounded px-2 py-1.5 text-sm border ${chrome.border} ${chrome.bg}`} placeholder="12" />
-                    </label>
-                    <label className="block">
-                      <div className={`text-xs ${chrome.muted} mb-1`}>End</div>
-                      <input value={cEnd} onChange={e=>setCEnd(e.target.value)} className={`w-full rounded px-2 py-1.5 text-sm border ${chrome.border} ${chrome.bg}`} placeholder="18" />
-                    </label>
-                    <div className="md:col-span-4">
-                      <textarea value={cBody} onChange={e=>setCBody(e.target.value)} rows={3} className={`w-full rounded px-3 py-2 text-sm border ${chrome.border} ${chrome.bg}`} placeholder="Actionable feedback, suggestions, references…" />
-                    </div>
-                    <div className="md:col-span-4 flex justify-end gap-2">
-                      <button onClick={()=>{ setCBody(''); }} className={`text-sm px-3 py-1.5 rounded-md border ${chrome.border} hover:bg-slate-50/5`}>Clear</button>
-                      <button onClick={addOneComment} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-sm">Add comment</button>
-                    </div>
-                  </div>
+              {/* Middle: code viewer */}
+              <section className="col-span-12 md:col-span-8 lg:col-span-6">
+                <div className={`${wide ? '' : 'mx-auto w-full max-w-[1200px] px-2'}`}>
+                  <CodeViewer
+                    ref={viewerRef}
+                    text={sel.type === 'REPO' ? fileText : sel.content || ''}
+                    filePath={sel.type === 'REPO' ? filePath : sel.title}
+                    comments={visibleComments}
+                    onSelectRange={handleSelectRange}
+                    dark={dark}
+                    wide={wide}
+                  />
                 </div>
               </section>
+
+              {/* Right: comments panel (stacks under code on small) */}
+              <aside className="col-span-12 lg:col-span-3">
+                <div className={`h-full rounded-xl border ${chrome.border} ${chrome.panel} overflow-hidden flex flex-col`}>
+                  <div className="px-3 py-2 border-b sticky top-0 z-10 bg-inherit">
+                    <div className="text-sm font-semibold">Comments</div>
+                    <div className={`text-xs ${chrome.muted}`}>Click any comment to jump to code</div>
+                  </div>
+
+                  {/* Add comment */}
+                  <div className="px-3 py-3 border-b">
+                    <div className="grid grid-cols-3 gap-2 items-end">
+                      <label className="block col-span-3">
+                        <div className={`text-xs ${chrome.muted} mb-1`}>File</div>
+                        <input
+                          value={cFile}
+                          onChange={e => setCFile(e.target.value)}
+                          className={`w-full rounded px-2 py-1.5 text-sm border ${chrome.border} ${chrome.bg}`}
+                          placeholder="path/in/repo"
+                        />
+                      </label>
+                      <label className="block">
+                        <div className={`text-xs ${chrome.muted} mb-1`}>Start</div>
+                        <input
+                          value={cStart}
+                          onChange={e => setCStart(e.target.value)}
+                          className={`w-full rounded px-2 py-1.5 text-sm border ${chrome.border} ${chrome.bg}`}
+                          placeholder="12"
+                        />
+                      </label>
+                      <label className="block">
+                        <div className={`text-xs ${chrome.muted} mb-1`}>End</div>
+                        <input
+                          value={cEnd}
+                          onChange={e => setCEnd(e.target.value)}
+                          className={`w-full rounded px-2 py-1.5 text-sm border ${chrome.border} ${chrome.bg}`}
+                          placeholder="18"
+                        />
+                      </label>
+                      <div className="col-span-3">
+                        <textarea
+                          value={cBody}
+                          onChange={e => setCBody(e.target.value)}
+                          rows={3}
+                          className={`w-full rounded px-3 py-2 text-sm border ${chrome.border} ${chrome.bg}`}
+                          placeholder="Actionable feedback…"
+                        />
+                      </div>
+                      <div className="col-span-3 flex justify-end gap-2">
+                        <button
+                          onClick={() => setCBody('')}
+                          className={`text-xs px-3 py-1.5 rounded-md border ${chrome.border} hover:bg-slate-50/5`}
+                        >
+                          Clear
+                        </button>
+                        <button
+                          onClick={addOneComment}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* List */}
+                  <div className="flex-1 overflow-auto p-3">
+                    {visibleComments.length === 0 ? (
+                      <div className={`text-sm ${chrome.muted}`}>No comments yet.</div>
+                    ) : (
+                      <ul className="space-y-2">
+                        {visibleComments.map(c => (
+                          <li
+                            key={c.id}
+                            className={`border ${chrome.border} rounded-lg p-2 ${dark ? 'bg-slate-800/60' : 'bg-slate-50'} cursor-pointer hover:ring-1 hover:ring-cyan-500`}
+                            onClick={() => jumpTo(c)}
+                            title="Click to jump to code"
+                          >
+                            <div className={`text-[11px] ${chrome.muted} mb-1`}>
+                              {c.authorRole} {c.filePath ? `• ${c.filePath}` : ''}{' '}
+                              {c.lineStart ? `• L${c.lineStart}${c.lineEnd ? `-${c.lineEnd}` : ''}` : ''}
+                            </div>
+                            <div className="text-sm whitespace-pre-wrap">{c.body}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </aside>
             </div>
           )}
 
@@ -354,7 +468,7 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
                       </div>
                       <div className="flex gap-2">
                         <button
-                          onClick={()=>openArtifact(a)}
+                          onClick={() => openArtifact(a)}
                           className="text-sm px-3 py-1.5 rounded-md bg-cyan-600 hover:bg-cyan-700 text-white"
                         >
                           Open
@@ -373,7 +487,11 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
               <div className="grid md:grid-cols-3 gap-3">
                 <label className="block">
                   <div className={`text-sm ${chrome.muted} mb-1`}>Type</div>
-                  <select value={type} onChange={e=>setType(e.target.value)} className={`w-full border ${chrome.border} ${chrome.bg} rounded px-3 py-2 text-sm`}>
+                  <select
+                    value={type}
+                    onChange={e => setType(e.target.value)}
+                    className={`w-full border ${chrome.border} ${chrome.bg} rounded px-3 py-2 text-sm`}
+                  >
                     <option value="REPO">Repo URL</option>
                     <option value="DIFF">Diff (text)</option>
                     <option value="FILE">File contents (text)</option>
@@ -381,27 +499,52 @@ export default function CodeReviewPanel({ booking, meId, meRole='MENTEE', onClos
                 </label>
                 <label className="block md:col-span-2">
                   <div className={`text-sm ${chrome.muted} mb-1`}>Title</div>
-                  <input value={title} onChange={e=>setTitle(e.target.value)} className={`w-full border ${chrome.border} ${chrome.bg} rounded px-3 py-2 text-sm`} placeholder="Short title"/>
+                  <input
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    className={`w-full border ${chrome.border} ${chrome.bg} rounded px-3 py-2 text-sm`}
+                    placeholder="Short title"
+                  />
                 </label>
               </div>
 
               {type === 'REPO' && (
                 <label className="block">
                   <div className={`text-sm ${chrome.muted} mb-1`}>Repository URL (GitHub)</div>
-                  <input value={repoUrl} onChange={e=>setRepoUrl(e.target.value)} className={`w-full border ${chrome.border} ${chrome.bg} rounded px-3 py-2 text-sm`} placeholder="https://github.com/owner/repo or /tree/branch" />
+                  <input
+                    value={repoUrl}
+                    onChange={e => setRepoUrl(e.target.value)}
+                    className={`w-full border ${chrome.border} ${chrome.bg} rounded px-3 py-2 text-sm`}
+                    placeholder="https://github.com/owner/repo or /tree/branch"
+                  />
                 </label>
               )}
 
               {(type === 'DIFF' || type === 'FILE') && (
                 <label className="block">
-                  <div className={`text-sm ${chrome.muted} mb-1`}>{type === 'DIFF' ? 'Paste unified diff (.patch)' : 'Paste file content'}</div>
-                  <textarea value={content} onChange={e=>setContent(e.target.value)} rows={12} className={`w-full border ${chrome.border} ${chrome.bg} rounded px-3 py-2 text-sm font-mono`} />
+                  <div className={`text-sm ${chrome.muted} mb-1`}>
+                    {type === 'DIFF' ? 'Paste unified diff (.patch)' : 'Paste file content'}
+                  </div>
+                  <textarea
+                    value={content}
+                    onChange={e => setContent(e.target.value)}
+                    rows={12}
+                    className={`w-full border ${chrome.border} ${chrome.bg} rounded px-3 py-2 text-sm font-mono`}
+                  />
                 </label>
               )}
 
               <div className="flex justify-between">
-                <button type="button" onClick={()=>setTab('list')} className={`text-sm px-3 py-1.5 rounded-md border ${chrome.border} hover:bg-slate-50/5`}>← Back</button>
-                <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded">Create</button>
+                <button
+                  type="button"
+                  onClick={() => setTab('list')}
+                  className={`text-sm px-3 py-1.5 rounded-md border ${chrome.border} hover:bg-slate-50/5`}
+                >
+                  ← Back
+                </button>
+                <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded">
+                  Create
+                </button>
               </div>
             </form>
           )}
