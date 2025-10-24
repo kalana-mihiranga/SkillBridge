@@ -1,0 +1,201 @@
+# docker-compose.yml (place at SkillBridge root)
+services:
+  # USERS DB + SERVICE
+  users-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: users_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - users_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d users_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  users-service:
+    build: ./users-service
+    depends_on:
+      users-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@users-db:5432/users_db?schema=public"
+      PORT: "4101"
+    ports:
+      - "4101:4101"
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4101/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # AVAILABILITY
+  availability-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: availability_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - availability_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d availability_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  availability-service:
+    build: ./availability-service
+    depends_on:
+      availability-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@availability-db:5432/availability_db?schema=public"
+      PORT: "4102"
+    ports:
+      - "4102:4102"
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4102/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # BOOKING
+  booking-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: booking_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - booking_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d booking_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  booking-service:
+    build: ./booking-service
+    depends_on:
+      booking-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@booking-db:5432/booking_db?schema=public"
+      PORT: "4103"
+    ports:
+      - "4103:4103"
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4103/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MESSAGING
+  messaging-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: messaging_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - messaging_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d messaging_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  messaging-service:
+    build: ./messaging-service
+    depends_on:
+      messaging-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@messaging-db:5432/messaging_db?schema=public"
+      PORT: "4104"
+    ports:
+      - "4104:4104"
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4104/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # CODE REVIEW
+  code-review-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: code_review_db
+    ports:
+      - "5437:5432"
+    volumes:
+      - code_review_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d code_review_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  code-review-service:
+    build: ./code-review-service
+    depends_on:
+      code-review-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@code-review-db:5432/code_review_db?schema=public"
+      PORT: "4105"
+    ports:
+      - "4105:4105"
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4105/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FRONTEND
+  frontend:
+    build: ./users-service-frontend/sb-web
+    depends_on:
+      - users-service
+      - availability-service
+      - booking-service
+      - messaging-service
+      - code-review-service
+    ports:
+      - "5173:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:80 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  users_db_data:
+  availability_db_data:
+  booking_db_data:
+  messaging_db_data:
+  code_review_db_data:
