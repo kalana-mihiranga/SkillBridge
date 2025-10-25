@@ -1,0 +1,83 @@
+substitutions:
+- "${_NAMESPACE}"
+- id: "kubectl-rollout-users"
+name: "gcr.io/cloud-builders/kubectl"
+args: ["rollout", "status", "deployment/users-deployment", "-n", "${_NAMESPACE}"]
+
+
+- id: "kubectl-set-image-availability"
+name: "gcr.io/cloud-builders/kubectl"
+args:
+- "set"
+- "image"
+- "deployment/availability-deployment"
+- "availability=us-central1-docker.pkg.dev/$PROJECT_ID/${_REPO}/availability-service:${SHORT_SHA}"
+- "-n"
+- "${_NAMESPACE}"
+- id: "kubectl-rollout-availability"
+name: "gcr.io/cloud-builders/kubectl"
+args: ["rollout", "status", "deployment/availability-deployment", "-n", "${_NAMESPACE}"]
+
+
+- id: "kubectl-set-image-booking"
+name: "gcr.io/cloud-builders/kubectl"
+args:
+- "set"
+- "image"
+- "deployment/booking-deployment"
+- "booking=us-central1-docker.pkg.dev/$PROJECT_ID/${_REPO}/booking-service:${SHORT_SHA}"
+- "-n"
+- "${_NAMESPACE}"
+- id: "kubectl-rollout-booking"
+name: "gcr.io/cloud-builders/kubectl"
+args: ["rollout", "status", "deployment/booking-deployment", "-n", "${_NAMESPACE}"]
+
+
+- id: "kubectl-set-image-messaging"
+name: "gcr.io/cloud-builders/kubectl"
+args:
+- "set"
+- "image"
+- "deployment/messaging-deployment"
+- "messaging=us-central1-docker.pkg.dev/$PROJECT_ID/${_REPO}/messaging-service:${SHORT_SHA}"
+- "-n"
+- "${_NAMESPACE}"
+- id: "kubectl-rollout-messaging"
+name: "gcr.io/cloud-builders/kubectl"
+args: ["rollout", "status", "deployment/messaging-deployment", "-n", "${_NAMESPACE}"]
+
+
+- id: "kubectl-set-image-code-review"
+name: "gcr.io/cloud-builders/kubectl"
+args:
+- "set"
+- "image"
+- "deployment/code-review-deployment"
+- "code-review=us-central1-docker.pkg.dev/$PROJECT_ID/${_REPO}/code-review-service:${SHORT_SHA}"
+- "-n"
+- "${_NAMESPACE}"
+- id: "kubectl-rollout-code-review"
+name: "gcr.io/cloud-builders/kubectl"
+args: ["rollout", "status", "deployment/code-review-deployment", "-n", "${_NAMESPACE}"]
+
+
+- id: "kubectl-set-image-frontend"
+name: "gcr.io/cloud-builders/kubectl"
+args:
+- "set"
+- "image"
+- "deployment/frontend-deployment"
+- "frontend=us-central1-docker.pkg.dev/$PROJECT_ID/${_REPO}/frontend:${SHORT_SHA}"
+- "-n"
+- "${_NAMESPACE}"
+- id: "kubectl-rollout-frontend"
+name: "gcr.io/cloud-builders/kubectl"
+args: ["rollout", "status", "deployment/frontend-deployment", "-n", "${_NAMESPACE}"]
+
+
+- id: "kubectl-get-all"
+name: "gcr.io/cloud-builders/kubectl"
+args: ["get", "all", "-n", "${_NAMESPACE}", "-o", "wide"]
+
+
+timeout: "1200s"

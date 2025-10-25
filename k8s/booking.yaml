@@ -1,0 +1,165 @@
+# k8s/booking.yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: booking-db-secret
+  namespace: skillbridge
+stringData:
+  POSTGRES_PASSWORD: "postgres"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: booking-config
+  namespace: skillbridge
+data:
+  PORT: "4103"
+  DATABASE_URL: "postgresql://postgres:postgres@booking-db:5432/booking_db?schema=public"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: booking-db
+  namespace: skillbridge
+spec:
+  serviceName: "booking-db"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking-db
+  template:
+    metadata:
+      labels:
+        app: booking-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: booking-db-secret
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "booking_db"
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: pgdata
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-db
+  namespace: skillbridge
+spec:
+  selector:
+    app: booking-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-deployment
+  namespace: skillbridge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking
+  template:
+    metadata:
+      labels:
+        app: booking
+    spec:
+      containers:
+      - name: booking
+        image: us-central1-docker.pkg.dev/skillbridge-demo/skillbridge-repo/booking-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 4103
+        env:
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: PORT
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: DATABASE_URL
+        - name: AVAIL_API_URL
+          value: "http://availability-service:4102"
+        - name: USERS_API_URL
+          value: "http://users-service:4101"
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 4103
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 4103
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-service
+  namespace: skillbridge
+spec:
+  selector:
+    app: booking
+  ports:
+    - protocol: TCP
+      port: 4103
+      targetPort: 4103
+  type: ClusterIP
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: booking-migrate
+  namespace: skillbridge
+spec:
+  template:
+    spec:
+      containers:
+      - name: migrate
+        image: us-central1-docker.pkg.dev/skillbridge-demo/skillbridge-repo/booking-service:latest
+        command: ["sh", "-c", "npx prisma migrate deploy"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: booking-config
+              key: DATABASE_URL
+      restartPolicy: OnFailure
+  backoffLimit: 1

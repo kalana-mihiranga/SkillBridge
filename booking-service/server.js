@@ -3,8 +3,8 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
 
-const AVAIL = process.env.AVAIL_API_URL || 'http://localhost:4102';
-const USERS = process.env.USERS_API_URL || 'http://localhost:4101';
+const AVAIL = process.env.AVAIL_API_URL || 'http://availability-service:4102';
+const USERS = process.env.USERS_API_URL || 'http://users-service:4101';
 
 async function getUser(id) {
   const r = await fetch(`${USERS}/users/${id}`);

@@ -1,0 +1,5 @@
+services:
+  booking-service:
+    environment:
+      AVAIL_API_URL: "http://availability-service:4102"
+      USERS_API_URL: "http://users-service:4101"
