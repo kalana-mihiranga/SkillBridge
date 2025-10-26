@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: skillbridge
+  labels:
+    app: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: us-central1-docker.pkg.dev/<PROJECT_ID>/skillbridge-repo/frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          env:
+            - name: VITE_USERS_API
+              value: "http://users-service:4101"
+            - name: VITE_AVAIL_API
+              value: "http://availability-service:4102"
+            - name: VITE_BOOKING_API
+              value: "http://booking-service:4103"
+            - name: VITE_MSG_API
+              value: "http://messaging-service:4104"
+            - name: VITE_CODE_REVIEW_API
+              value: "http://code-review-service:4105"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: skillbridge
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http

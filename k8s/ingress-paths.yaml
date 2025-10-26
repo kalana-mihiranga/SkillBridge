@@ -1,0 +1,57 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: skillbridge-ingress
+  namespace: skillbridge
+  annotations:
+    kubernetes.io/ingress.class: "gce"                                 # GCE L7 LB
+    networking.gke.io/managed-certificates: "skillbridge-managed-cert"  # attach managed cert (create below)
+    ingress.gcp.kubernetes.io/pre-shared-cert: ""                       # empty since we use managed cert resource
+    kubernetes.io/ingress.allow-http: "true"
+spec:
+  rules:
+  - host: demo.skillbridge.example.com   # <- replace with your domain
+    http:
+      paths:
+      - path: /api/users
+        pathType: Prefix
+        backend:
+          service:
+            name: users-service
+            port:
+              number: 4101
+      - path: /api/availability
+        pathType: Prefix
+        backend:
+          service:
+            name: availability-service
+            port:
+              number: 4102
+      - path: /api/booking
+        pathType: Prefix
+        backend:
+          service:
+            name: booking-service
+            port:
+              number: 4103
+      - path: /api/messaging
+        pathType: Prefix
+        backend:
+          service:
+            name: messaging-service
+            port:
+              number: 4104
+      - path: /api/code-review
+        pathType: Prefix
+        backend:
+          service:
+            name: code-review-service
+            port:
+              number: 4105
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-lb
+            port:
+              number: 80

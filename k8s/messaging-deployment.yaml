@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: messaging-service
+  namespace: skillbridge
+  labels:
+    app: messaging-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: messaging-service
+  template:
+    metadata:
+      labels:
+        app: messaging-service
+    spec:
+      containers:
+        - name: messaging-service
+          image: us-central1-docker.pkg.dev/<PROJECT_ID>/skillbridge-repo/messaging-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4104
+          env:
+            - name: PORT
+              value: "4104"
+            - name: DATABASE_URL
+              value: "postgresql://postgres:postgres@messaging-db:5432/messaging_db?schema=public"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: messaging-service
+  namespace: skillbridge
+  labels:
+    app: messaging-service
+spec:
+  type: ClusterIP
+  selector:
+    app: messaging-service
+  ports:
+    - port: 4104
+      targetPort: 4104
+      protocol: TCP
+      name: http

@@ -3,10 +3,10 @@ import { pingUsers } from '../api/users';
 import { http } from '../api/client';
 
 // Define base URLs from environment variables
-const USERS_API = import.meta.env.VITE_USERS_API || 'http://localhost:4101';
-const AVAIL_API = import.meta.env.VITE_AVAIL_API || 'http://localhost:4102';
-const BOOK_API  = import.meta.env.VITE_BOOKING_API || 'http://localhost:4103';
-const MSG_API   = import.meta.env.VITE_MSG_API || 'http://localhost:4104';
+const USERS_API = import.meta.env.VITE_USERS_API || '/users';
+const AVAIL_API = import.meta.env.VITE_AVAIL_API || '/availability';
+const BOOK_API  = import.meta.env.VITE_BOOKING_API || '/booking';
+const MSG_API   = import.meta.env.VITE_MSG_API || '/messaging';
 
 export default function Home() {
   const [results, setResults] = useState([]);

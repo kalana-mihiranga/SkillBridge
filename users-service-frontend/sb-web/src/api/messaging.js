@@ -1,5 +1,5 @@
 import { http } from './client';
-const MSG_API = import.meta.env.VITE_MSG_API || '/api/messaging';
+const MSG_API = import.meta.env.VITE_MSG_API || '/messaging';
 
 export function ensureThread(bookingId) { return http.post('/threads', { bookingId }, MSG_API); }
 export function getThreadByBooking(bookingId) { return http.get(`/threads/by-booking/${bookingId}`, {}, MSG_API); }

@@ -1,6 +1,6 @@
 // src/api/codeReview.js
 import { http } from './client';
-const CR_API = import.meta.env.VITE_CODE_REVIEW_API || '/api/code-review';
+const CR_API = import.meta.env.VITE_CODE_REVIEW_API || '/code-review';
 
 export function listArtifacts(bookingId) {
   return http.get('/artifacts', { bookingId }, CR_API);

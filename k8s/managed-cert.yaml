@@ -1,0 +1,8 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: skillbridge-managed-cert
+  namespace: skillbridge
+spec:
+  domains:
+  - demo.skillbridge.example.com   # <- replace with your domain

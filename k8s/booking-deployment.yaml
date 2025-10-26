@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-service
+  namespace: skillbridge
+  labels:
+    app: booking-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking-service
+  template:
+    metadata:
+      labels:
+        app: booking-service
+    spec:
+      containers:
+        - name: booking-service
+          image: us-central1-docker.pkg.dev/<PROJECT_ID>/skillbridge-repo/booking-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4103
+          env:
+            - name: PORT
+              value: "4103"
+            - name: AVAIL_API_URL
+              value: "http://availability-service:4102"
+            - name: USERS_API_URL
+              value: "http://users-service:4101"
+            - name: DATABASE_URL
+              value: "postgresql://postgres:postgres@booking-db:5432/booking_db?schema=public"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-service
+  namespace: skillbridge
+  labels:
+    app: booking-service
+spec:
+  type: ClusterIP
+  selector:
+    app: booking-service
+  ports:
+    - port: 4103
+      targetPort: 4103
+      protocol: TCP
+      name: http

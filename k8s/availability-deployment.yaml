@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: availability-service
+  namespace: skillbridge
+  labels:
+    app: availability-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: availability-service
+  template:
+    metadata:
+      labels:
+        app: availability-service
+    spec:
+      containers:
+        - name: availability-service
+          image: us-central1-docker.pkg.dev/<PROJECT_ID>/skillbridge-repo/availability-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4102
+          env:
+            - name: PORT
+              value: "4102"
+            - name: DATABASE_URL
+              value: "postgresql://postgres:postgres@availability-db:5432/availability_db?schema=public"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: availability-service
+  namespace: skillbridge
+  labels:
+    app: availability-service
+spec:
+  type: ClusterIP
+  selector:
+    app: availability-service
+  ports:
+    - port: 4102
+      targetPort: 4102
+      protocol: TCP
+      name: http

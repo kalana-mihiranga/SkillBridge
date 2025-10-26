@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-service
+  namespace: skillbridge
+  labels:
+    app: users-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: users-service
+  template:
+    metadata:
+      labels:
+        app: users-service
+    spec:
+      containers:
+        - name: users-service
+          image: us-central1-docker.pkg.dev/<PROJECT_ID>/skillbridge-repo/users-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4101
+          env:
+            - name: PORT
+              value: "4101"
+            # If using a DB service in cluster, point DATABASE_URL accordingly. Example:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:postgres@users-db:5432/users_db?schema=public"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: users-service
+  namespace: skillbridge
+  labels:
+    app: users-service
+spec:
+  type: ClusterIP
+  selector:
+    app: users-service
+  ports:
+    - port: 4101
+      targetPort: 4101
+      protocol: TCP
+      name: http

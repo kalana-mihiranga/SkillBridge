@@ -2,6 +2,13 @@
 const app = require('./app');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+// add these health endpoints (place before app.listen(...))
+app.get('/availability/health', (req, res) => {
+  res.json({ ok: true, service: 'availability' });
+});
+app.get('/api/v1/availability/health', (req, res) => {
+  res.json({ ok: true, service: 'availability' });
+});
 
 /**
  * POST /availability/slots

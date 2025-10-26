@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-review-service
+  namespace: skillbridge
+  labels:
+    app: code-review-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: code-review-service
+  template:
+    metadata:
+      labels:
+        app: code-review-service
+    spec:
+      containers:
+        - name: code-review-service
+          image: us-central1-docker.pkg.dev/<PROJECT_ID>/skillbridge-repo/code-review-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4105
+          env:
+            - name: PORT
+              value: "4105"
+            - name: DATABASE_URL
+              value: "postgresql://postgres:postgres@code-review-db:5432/code_review_db?schema=public"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-review-service
+  namespace: skillbridge
+  labels:
+    app: code-review-service
+spec:
+  type: ClusterIP
+  selector:
+    app: code-review-service
+  ports:
+    - port: 4105
+      targetPort: 4105
+      protocol: TCP
+      name: http
